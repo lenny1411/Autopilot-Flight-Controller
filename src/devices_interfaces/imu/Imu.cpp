@@ -4,14 +4,14 @@
 
 #include "Imu.h"
 #include <esp_log.h>
+#include <utils/utils.h>
 
 Imu::~Imu() {
 
 }
 
 int8_t Imu::init() {
-    if(i2c->init())
-        return  -1;
+    i2c->init();
     if(accel.init() != 0)
         return -1;
     if(gyro.init() != 0)
@@ -43,26 +43,35 @@ int8_t Imu::updateAndGetData(struct attitudeData &values) {
     values.accRatePitch -= accRateOffsetPitch;
     values.accRateYaw -= accRateOffsetYaw;
 
+    // values.gyroRateRoll = magMaxAxisX; // deg/s
+    // values.gyroRatePitch = magMaxAxisY; // deg/s
+    // values.gyroRateYaw = magMaxAxisZ; // deg/s
+
+    // values.accRateRoll = magMinAxisX;
+    // values.accRatePitch = magMinAxisY;
+    // values.accRateYaw = magMinAxisZ;
+
+    return 0;
+}
+
+int8_t Imu::getMagData(struct attitudeData &values)
+{
     if(mag.updateAndGetData(values) == 0) {
         values.magY += compass_offset_y;                              //Add the y-offset to the raw value.
         values.magY *= compass_scale_y;                               //Scale the y-value so it matches the other axis.
         values.magZ += compass_offset_z;                              //Add the z-offset to the raw value.
         values.magZ *= compass_scale_z;                               //Scale the z-value so it matches the other axis.
         values.magX += compass_offset_x;                              //Add the x-offset to the raw value.
+        return 0;
     }
-
-    return 0;
+    return -1;
 }
 
 Imu::Imu(I2cDevice *i2c) {
     this->i2c = i2c;
     accel = Bmi088Accel(*i2c, 0x19);
     gyro = Bmi088Gyro(*i2c, 0x69);
-    mag = BMM150(i2c);
-
-    magMaxAxisX = 135; magMinAxisX = -151;
-    magMaxAxisY = 150; magMinAxisY = -159;
-    magMaxAxisZ = 131; magMinAxisZ = -166;
+    mag = IST8310(i2c);
 
     gyroRateOffsetRoll  = 0;
     gyroRateOffsetPitch = 0;
@@ -94,7 +103,7 @@ void Imu::magCalibration(uint16_t time) {
 #if ENABLE_MAG_CALIBRATION == 1
     ESP_LOGE("MAG", "Calib start");
 
-	while(mag.updateAndGetData(values) != 0);        					   //Read the raw compass values.
+	while(mag.updateAndGetData(values) != 0);          					  //Read the raw compass values.
 
 	magMinAxisX = values.magX;
 	magMaxAxisX = values.magX;
@@ -105,11 +114,13 @@ void Imu::magCalibration(uint16_t time) {
 	magMinAxisZ = values.magZ;
 	magMaxAxisZ = values.magZ;
 
+    delay_milis(100);
+
 	for(int i = 0;i < time;i++) {                                                 //Stay in this loop until the pilot lowers the pitch stick of the transmitter.                                                 //Send telemetry data to the ground station.
 	    while(mag.updateAndGetData(values) != 0);          					  //Read the raw compass values.
 
-	    values.magX *= -1;
-	    values.magY *= -1;
+        ESP_LOGE("MAG", "X=%i Y=%i Z=%i", values.magX, values.magY, values.magZ);
+
 	    //In the following lines the maximum and minimum compass values are detected and stored.
 	    if (values.magX < magMinAxisX)
 	    	magMinAxisX = values.magX;
@@ -126,9 +137,10 @@ void Imu::magCalibration(uint16_t time) {
 	    if (values.magZ > magMaxAxisZ)
 	    	magMaxAxisZ = values.magZ;
 
-        delay_milis(100);
+        delay_milis(50);
 	}
 #endif
+
 
     compass_scale_y = ((float)magMaxAxisX - magMinAxisX) / (magMaxAxisY - magMinAxisY);
     compass_scale_z = ((float)magMaxAxisX - magMinAxisX) / (magMaxAxisZ - magMinAxisZ);
@@ -137,7 +149,7 @@ void Imu::magCalibration(uint16_t time) {
     compass_offset_y = (((float)magMaxAxisY - magMinAxisY) / 2 - magMaxAxisY) * compass_scale_y;
     compass_offset_z = (((float)magMaxAxisZ - magMinAxisZ) / 2 - magMaxAxisZ) * compass_scale_z;
 
-//    ESP_LOGE("MAG", "maxX=%i minX=%i", magMaxAxisX, magMinAxisX);
-//    ESP_LOGE("MAG", "maxY=%i minY=%i", magMaxAxisY, magMinAxisY);
-//    ESP_LOGE("MAG", "maxZ=%i minZ=%i", magMaxAxisZ, magMinAxisZ);
+    ESP_LOGE("MAG", "maxX=%i minX=%i", magMaxAxisX, magMinAxisX);
+    ESP_LOGE("MAG", "maxY=%i minY=%i", magMaxAxisY, magMinAxisY);
+    ESP_LOGE("MAG", "maxZ=%i minZ=%i", magMaxAxisZ, magMinAxisZ);
 }

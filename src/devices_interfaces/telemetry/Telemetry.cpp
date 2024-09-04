@@ -24,7 +24,6 @@ int8_t Telemetry::deinit() {
 int8_t Telemetry::sendConfigValues(
     struct attitudeConfig &attitudeConf,
     struct pidConfig &pidConf,
-    struct pidAltitudeConfig &altitudeConf,
     struct pidNavigationConfig &navConf
 ) {
     StaticJsonDocument<1500> documentTx;
@@ -47,9 +46,9 @@ int8_t Telemetry::sendConfigValues(
     documentTx["dpitch"].set(pidConf.dpitch);
     documentTx["dyaw"].set(pidConf.dyaw);
 
-    documentTx["pAlt"].set(altitudeConf.pAltitude);
-    documentTx["iAlt"].set(altitudeConf.iAltitude);
-    documentTx["dAlt"].set(altitudeConf.dAltitude);
+    documentTx["pAlt"].set(pidConf.pAltitude);
+    documentTx["iAlt"].set(pidConf.iAltitude);
+    documentTx["dAlt"].set(pidConf.dAltitude);
 
     documentTx["pnav"].set(navConf.pnav);
     documentTx["inav"].set(navConf.inav);
@@ -71,10 +70,9 @@ int8_t Telemetry::sendTelemetryValues(
     struct attitudeData &attitude, 
     struct altitudeData &altitude, 
     struct positionData &position,
-    struct pidOutput &pid, 
     struct receiverData &receiver, 
     struct motorsData &motors, 
-    struct commanderState &commander, 
+    enum droneState &state, 
     uint64_t timestamp,
     uint64_t loopPeriod
 ) {
@@ -92,7 +90,7 @@ int8_t Telemetry::sendTelemetryValues(
     documentTx["accPitch"].set(attitude.accRatePitch);
     documentTx["accYaw"].set(attitude.accRateYaw);
 
-    documentTx["loopTime"].set(pid.loopPeriod);
+    documentTx["loopTime"].set(motors.loopPeriod);
     documentTx["timestamp"].set(timestamp);
     documentTx["alt"].set(altitude.alt);
     documentTx["vBat"].set(motors.vBat);
@@ -100,7 +98,7 @@ int8_t Telemetry::sendTelemetryValues(
     documentTx["lat"].set(position.lat);
     documentTx["lon"].set(position.lon);
 
-    documentTx["status"].set(commander.state);
+    documentTx["status"].set(state);
 
     for (int i = 0;i < NUMBER_OF_MOTORS;i++) {
         documentTx["mot"][i] = motors.mot[i];
@@ -119,7 +117,7 @@ int8_t Telemetry::sendTelemetryValues(
     return 0;
 }
 
-bool Telemetry::isConfigDataAvailable() {
+bool Telemetry::isGroundStationAvailable() {
     if(wifiManager.dataAvailable() > 0)
         return true;
     return false;
@@ -133,11 +131,10 @@ void Telemetry::resetRecvBuffer() {
 int8_t Telemetry::getConfigData(
     struct attitudeConfig *attitude,
     struct pidConfig *pid,
-    struct pidAltitudeConfig *altitude,
     struct pidNavigationConfig *navConf,
-    struct motorsSetpoint *motors,
+    struct motorsData *motors,
     struct navigationSetpoint *navSetpoint,
-    struct commanderState *commander) 
+    enum droneState *state) 
 {
     char recvBuffer[1000];
     StaticJsonDocument<1200> documentRx;
@@ -151,12 +148,7 @@ int8_t Telemetry::getConfigData(
     if(err != DeserializationError::Ok)
         return -1;
 
-    attitude->newConfig = true;
-    pid->newConfig = true;
-    altitude->newConfig = true;
-    navConf->newConfig = true;
-
-    commander->state = (enum droneState)documentRx["status"].as<int>();
+    *state = (enum droneState)documentRx["status"].as<int>();
 
     attitude->offsetRoll = documentRx["roll"].as<float>();
     attitude->offsetPitch = documentRx["pitch"].as<float>();
@@ -174,9 +166,9 @@ int8_t Telemetry::getConfigData(
     pid->dpitch = documentRx["dpitch"].as<float>();
     pid->dyaw = documentRx["dyaw"].as<float>();
 
-    altitude->pAltitude = documentRx["pAlt"].as<float>();
-    altitude->iAltitude = documentRx["iAlt"].as<float>();
-    altitude->dAltitude = documentRx["dAlt"].as<float>();
+    pid->pAltitude = documentRx["pAlt"].as<float>();
+    pid->iAltitude = documentRx["iAlt"].as<float>();
+    pid->dAltitude = documentRx["dAlt"].as<float>();
 
     navConf->pnav = documentRx["pnav"].as<float>();
     navConf->inav = documentRx["inav"].as<float>();

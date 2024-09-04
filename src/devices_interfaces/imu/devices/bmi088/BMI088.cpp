@@ -657,7 +657,7 @@ int8_t Bmi088Accel::init()
         return -1;
     if(!setRange(Bmi088Accel::RANGE_6G))
         return -1;
-    if(!setOdr(Bmi088Accel::ODR_400HZ_BW_40HZ))
+    if(!setOdr(Bmi088Accel::ODR_400HZ_BW_75HZ))
         return -1;
 
     return 0;
@@ -670,8 +670,8 @@ int8_t Bmi088Accel::deinit()
 
 int8_t Bmi088Accel::updateAndGetData(attitudeData &values)
 {
-    if(!isCorrectId())
-        return -1;
+    // if(!isCorrectId())
+    //     return -1;
 
     readSensor();
 
@@ -807,19 +807,19 @@ bool Bmi088Accel::setRange(Range range)
   if (readReg == writeReg) {
     switch (range) {
       case RANGE_3G: {
-        accel_range_mss = 0x00;
+        accel_range_mss = 10920;
         break;
       }
       case RANGE_6G: {
-        accel_range_mss = 0x01;
+        accel_range_mss = 5460;
         break;
       }
       case RANGE_12G: {
-        accel_range_mss = 0x02;
+        accel_range_mss = 2730;
         break;
       }
       case RANGE_24G: {
-        accel_range_mss = 0x03;
+        accel_range_mss = 1365;
         break;
       }      
     }
@@ -880,25 +880,31 @@ void Bmi088Accel::readSensor()
   uint16_t temp_uint11;
   int16_t accel[3], temp_int11;
   readRegisters(ACC_ACCEL_DATA_ADDR,9,_buffer);
-  accel[0] = (_buffer[1] << 8) | _buffer[0];
-  accel[1] = (_buffer[3] << 8) | _buffer[2];
-  accel[2] = (_buffer[5] << 8) | _buffer[4];
-  accel_mss[0] = (float) (accel[0] / 32768.0f * pow(accel_range_mss + 1, 2) * 1.5);
-  accel_mss[1] = (float) (accel[1] / 32768.0f * pow(accel_range_mss + 1, 2) * 1.5);
-  accel_mss[2] = (float) (accel[2] / 32768.0f * pow(accel_range_mss + 1, 2) * 1.5);
+  accel[0] = ((_buffer[1] << 8) | _buffer[0]) -    0;
+  accel[1] = ((_buffer[3] << 8) | _buffer[2]) -    0;
+  accel[2] = ((_buffer[5] << 8) | _buffer[4]) -    0;
+  // accel[0] = (_buffer[1] << 8) | _buffer[0];
+  // accel[1] = (_buffer[3] << 8) | _buffer[2];
+  // accel[2] = (_buffer[5] << 8) | _buffer[4];
+  accel_mss[0] = (float) (accel[0] / accel_range_mss) * 9.81f;
+  accel_mss[1] = (float) (accel[1] / accel_range_mss) * 9.81f;
+  accel_mss[2] = (float) (accel[2] / accel_range_mss) * 9.81f;
+  // accel_mss[0] = accel[0];
+  // accel_mss[1] = accel[1];
+  // accel_mss[2] = accel[2];
   /* time data */
   current_time_counter = (_buffer[8] << 16) | (_buffer[7] << 8) | _buffer[6];
   time_counter = current_time_counter - prev_time_counter;
   prev_time_counter = current_time_counter;
-  /* temperature data */
-  readRegisters(ACC_TEMP_DATA_ADDR,2,_buffer);
-  temp_uint11 = (_buffer[0] * 8) + (_buffer[1] / 32);
-  if (temp_uint11 > 1023) {
-    temp_int11 = temp_uint11 - 2048;
-  } else {
-    temp_int11 = temp_uint11;
-  }
-  temp_c = (float) temp_int11 * 0.125f + 23.0f;
+  // /* temperature data */
+  // readRegisters(ACC_TEMP_DATA_ADDR,2,_buffer);
+  // temp_uint11 = (_buffer[0] * 8) + (_buffer[1] / 32);
+  // if (temp_uint11 > 1023) {
+  //   temp_int11 = temp_uint11 - 2048;
+  // } else {
+  //   temp_int11 = temp_uint11;
+  // }
+  // temp_c = (float) temp_int11 * 0.125f + 23.0f;
 }
 
 /* returns the x acceleration, m/s/s */
@@ -1169,8 +1175,7 @@ void Bmi088Accel::writeRegisters(uint8_t subAddress, uint8_t count, const uint8_
 /* reads registers from BMI088 given a starting register address, number of bytes, and a pointer to store data */
 void Bmi088Accel::readRegisters(uint8_t subAddress, uint8_t count, uint8_t* dest)
 {
-    _i2c->writeBytes(_address, (char *)&subAddress, 1, false);
-    _i2c->readBytes(_address, (char *)dest, count);
+    _i2c->writeAndReadBytes(_address, (char *)&subAddress, 1,(char *)dest, count);
 }
 
 /* BMI088 object, input the I2C bus and address */
@@ -1224,14 +1229,14 @@ int8_t Bmi088Gyro::deinit()
 
 int8_t Bmi088Gyro::updateAndGetData(attitudeData &values)
 {
-    if(!isCorrectId())
-        return -1;
+    // if(!isCorrectId())
+    //     return -1;
 
     readSensor();
 
     values.gyroRateRoll = getGyroX_deg(); // deg/s
     values.gyroRatePitch = getGyroY_deg(); // deg/s
-    values.gyroRateYaw = -getGyroZ_deg(); // deg/s
+    values.gyroRateYaw = getGyroZ_deg(); // deg/s
     return 0;
 }
 
@@ -1479,8 +1484,7 @@ void Bmi088Gyro::writeRegister(uint8_t subAddress, uint8_t data)
 /* reads registers from BMI088 given a starting register address, number of bytes, and a pointer to store data */
 void Bmi088Gyro::readRegisters(uint8_t subAddress, uint8_t count, uint8_t* dest)
 {
-    _i2c->writeBytes(_address, (char *)&subAddress, 1, false);
-    _i2c->readBytes(_address, (char *)dest, count);
+      _i2c->writeAndReadBytes(_address, (char *)&subAddress, 1,(char *)dest, count);
 }
 
 /* BMI088 object, input the I2C bus and address */

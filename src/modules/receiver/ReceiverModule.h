@@ -8,7 +8,7 @@
 #include <cstdint>
 #include "../../devices_interfaces/low-level/UartDevice.h"
 #include "../../devices_interfaces/receiver/Receiver.h"
-#include "../../resources/nodes.h"
+#include "../../msg/MessageManager.h"
 #include "../../utils/utils.h"
 
 class ReceiverModule {
@@ -20,7 +20,7 @@ private:
     Receiver receiver;
     struct receiverData values;
     struct pidSetpoint setpoint;
-    struct commanderState state;
+    enum droneState state;
     uint64_t timestamp = 0;
 
     void getDataFromNodesAndReceiver();

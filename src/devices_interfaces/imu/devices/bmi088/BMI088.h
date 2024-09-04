@@ -176,7 +176,7 @@ private:
     // convert G to m/s/s
     float G = 9.807f;
     // accel full scale range
-    char accel_range_mss;
+    float accel_range_mss;
     // accel data
     float accel_mss[3];
     // temperature data

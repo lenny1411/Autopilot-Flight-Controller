@@ -15,8 +15,8 @@ Gps::~Gps() {
 
 int8_t Gps::init() {
     uart.init(GPS_UART_PORT, GPS_UART_TX, GPS_UART_RX, GPS_UART_BAUD);
-    pointPerfectClient.init();
-    sendGpsConfig();
+    // ntripClient.init();
+    //sendGpsConfig();
     return 0;
 }
 
@@ -29,6 +29,7 @@ int8_t Gps::updateAndGetData(positionData &values) {
     double lat, lon;
     char c = 0;
     uint8_t count = 0;
+    int8_t ret = 0;
 
     memset(frame, '\0', sizeof(frame));
 
@@ -40,17 +41,19 @@ int8_t Gps::updateAndGetData(positionData &values) {
         count++;
     }
 
-    if(NMEA_GGA_decode(frame, lat, lon)) {   
+    if(NMEA_GGA_decode(frame, lat, lon) == 0) {   
         values.lat = lat;
         values.lon = lon;
     }
 
-    pointPerfectClient.process();
+    // ntripClient.process();
 
-    if(pointPerfectClient.getMessageLen()) {
-        uart.writeBytes((char *)pointPerfectClient.getMessage(), pointPerfectClient.getMessageLen());
-    }
-    return 0;
+    // if(ntripClient.getMessageLen()) {
+    //     uart.writeBytes((char *)ntripClient.getMessage(), ntripClient.getMessageLen());
+    // }
+    uart.flush();
+
+    return ret;
 }
 
 void Gps::sendGpsConfig() {
@@ -58,11 +61,11 @@ void Gps::sendGpsConfig() {
     uart.writeBytes(packet, sizeof(packet));
 }
 
-bool Gps::NMEA_GGA_decode(char* nmeaFrame, double &lat, double &lon) {
+int8_t Gps::NMEA_GGA_decode(char* nmeaFrame, double &lat, double &lon) {
     int32_t lat_gps_actual, lon_gps_actual;
     
     // 0 Not fix - 1 GPS Fix - 2 DGPS Fix - 3 PPS Fix - 4 RTK fix - 5 Float RTK Fix
-    if (nmeaFrame[4] == 'G' && nmeaFrame[5] == 'A' && (nmeaFrame[44] == '4' || nmeaFrame[44] == '5')) { 
+    if (nmeaFrame[4] == 'G' && nmeaFrame[5] == 'A' && (nmeaFrame[44] == '1' || nmeaFrame[44] == '2')) { 
         lat_gps_actual = ((int)nmeaFrame[19] - 48) *  (long)10000000;                              //Filter the minutes for the GGA line multiplied by 10.
         lat_gps_actual += ((int)nmeaFrame[20] - 48) * (long)1000000;                               //Filter the minutes for the GGA line multiplied by 10.
         lat_gps_actual += ((int)nmeaFrame[22] - 48) * (long)100000;                                //Filter the minutes for the GGA line multiplied by 10.
@@ -88,7 +91,7 @@ bool Gps::NMEA_GGA_decode(char* nmeaFrame, double &lat, double &lon) {
 
         lat = (double)lat_gps_actual / 1e7;
         lon = (double)lon_gps_actual / 1e7;
-        return true;
+        return 0;
     }
-    return false;
+    return -1;
 }

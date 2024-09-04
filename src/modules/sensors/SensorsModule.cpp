@@ -1,4 +1,5 @@
 //
+
 // Created by lenny on 14/01/24.
 //
 
@@ -6,60 +7,38 @@
 
 SensorsModule::SensorsModule(I2cDevice *i2c) {
     imu = Imu(i2c);
-    baro = Barometer(i2c);
-
-    attitudeConfigNode.addCallback([this](struct attitudeConfig newConfig) -> void {
-        ahrs.setConfig(newConfig.param1, newConfig.param2);
-
-        imu.updateAndGetData(attitudeValues);
-
-        ahrs.updateIMU(
-            attitudeValues.gyroRateRoll,
-            attitudeValues.gyroRatePitch,
-            attitudeValues.gyroRateYaw,
-            attitudeValues.accRateRoll,
-            attitudeValues.accRatePitch,
-            attitudeValues.accRateYaw
-        );
-
-        headingCorrection = computeHeading(attitudeValues.magX, attitudeValues.magY, attitudeValues.magZ, ahrs.getRoll(), ahrs.getPitch());
-        headingCorrection = headingCorrection - ahrs.getYaw();
-
-        altitudeOffset = altitudeValues.alt;
-    });
 }
 
 int8_t SensorsModule::init() {
-    config.offsetRoll = OFFSET_ROLL;
-    config.offsetPitch = OFFSET_PITCH;
-    config.offsetYaw = OFFSET_YAW;
-
     if(imu.init() != 0)
         return -1;
-    // if(baro.init() != 0)
-    //     return -1;
+
+    MessageManager::getInstance().subscribe(SENSOR_CONFIG_TOPIC, [this](const void* message) -> void {
+        config = *(static_cast<const attitudeConfig *>(message));
+        ahrs.setConfig(config.param1);
+    });
+
+    MessageManager::getInstance().subscribe(STATE_TOPIC, [this](const void* message) -> void {
+        state = *(static_cast<const droneState *>(message));
+    });
 
     delay_milis(3000);
 
-    altitudeValues.alt = 0;
-    altitudeValues.vertical_speed = 0;
+    // imu.updateAndGetData(attitudeValues);
+    // while(imu.getMagData(attitudeValues) != 0);
 
-    ahrs.begin(ATTITUDE_LOOP_FREQ);
-    ahrs.setConfig(PARAM_1, PARAM_2);
+    // float roll, pitch;
+    // computeOrientation(attitudeValues.accRateRoll, attitudeValues.accRatePitch, attitudeValues.accRateYaw, &roll, &pitch);
+    // headingCorrection = computeHeading(attitudeValues.magX, attitudeValues.magY, attitudeValues.magZ, roll, pitch);
 
-    imu.updateAndGetData(attitudeValues);
+    // ahrs.begin(ATTITUDE_LOOP_FREQ, roll, pitch, headingCorrection);
+    // ahrs.setConfig(PARAM_1, PARAM_2);
 
-    ahrs.updateIMU(
-            attitudeValues.gyroRateRoll,
-            attitudeValues.gyroRatePitch,
-            attitudeValues.gyroRateYaw,
-            attitudeValues.accRateRoll,
-            attitudeValues.accRatePitch,
-            attitudeValues.accRateYaw
-    );
+    // kalman.setParams(PARAM_1, PARAM_2);
+    // kalman.setAngles(roll, pitch, headingCorrection);
 
-    headingCorrection = computeHeading(attitudeValues.magX, attitudeValues.magY, attitudeValues.magZ, ahrs.getRoll(), ahrs.getPitch());
-    headingCorrection = headingCorrection - ahrs.getYaw();;
+    ahrs.setConfig(PARAM_1);
+    prevTimestamp = get_ms_count();
 
     return 0;
 }
@@ -67,59 +46,73 @@ int8_t SensorsModule::init() {
 void SensorsModule::run() {
     timestamp = get_ms_count();
 
-    getDataFromNodesAndSensors();
+    getDataFromSensors();
 
     computeData();
 
-    attitudeNode.set(attitudeValues);
-    altitudeNode.set(altitudeValues);
+    MessageManager::getInstance().publish(SENSOR_TOPIC, &attitudeValues);
 
     attitudeValues.loopPeriod = get_ms_count() - timestamp;
     wait(attitudeValues.loopPeriod, ATTITUDE_LOOP_FREQ);
     count++;
 }
 
-void SensorsModule::getDataFromNodesAndSensors() {
-    attitudeConfigNode.get(config);
+void SensorsModule::getDataFromSensors() {
     imu.updateAndGetData(attitudeValues);
-
-    /* if(count >= (float(1.0f / ALTITUDE_LOOP_FREQ) / float(1.0f / ATTITUDE_LOOP_FREQ))) {
-        struct altitudeData tempValues;
-        baro.updateAndGetData(tempValues);
-
-        tempValues.alt -= altitudeOffset;
-        altitudeValues.alt = altitudeValues.alt * 0.9996f + tempValues.alt * 0.0004f; 
-        float alt_diff = altitudeValues.alt - tempValues.alt;
-
-        if (alt_diff > 8) alt_diff = 8;                                                    //If the difference is larger then 8 limit the difference to 8.
-        if (alt_diff < -8) alt_diff = -8;                                                  //If the difference is smaller then -8 limit the difference to -8.
-        //If the difference is larger then 1 or smaller then -1 the slow average is adjuste based on the error between the fast and slow average.
-        if (alt_diff > 1 || alt_diff < -1) altitudeValues.alt -= alt_diff / 6.0;
-
-        computeVerticalSpeed();
-        
-        count = 0;
-    } */
+    imu.getMagData(attitudeValues);
 }
 
 void SensorsModule::computeData() {
-    ahrs.updateIMU(
-            attitudeValues.gyroRateRoll,
-            attitudeValues.gyroRatePitch,
-            attitudeValues.gyroRateYaw,
-            attitudeValues.accRateRoll,
-            attitudeValues.accRatePitch,
-            attitudeValues.accRateYaw
-    );
+    float roll, pitch;
 
-    attitudeValues.roll         = ahrs.getRoll()  - config.offsetRoll;
-    attitudeValues.pitch        = ahrs.getPitch() - config.offsetPitch;
-    attitudeValues.yaw          = ahrs.getYaw() + headingCorrection - config.offsetYaw;
+    if(state != DISARMED) {
+        ahrs.updateIMU(
+                attitudeValues.gyroRateRoll,
+                attitudeValues.gyroRatePitch,
+                attitudeValues.gyroRateYaw,
+                attitudeValues.accRateRoll,
+                attitudeValues.accRatePitch,
+                attitudeValues.accRateYaw
+                // attitudeValues.magX, 
+                // attitudeValues.magY, 
+                // attitudeValues.magZ
+        );
+        // kalman.estimatedAngles(roll, pitch, headingCorrection, attitudeValues.gyroRateRoll, attitudeValues.gyroRatePitch, -attitudeValues.gyroRateYaw);
 
-    if(attitudeValues.yaw > 360)
-        attitudeValues.yaw -= 360;
-    if(attitudeValues.yaw < 0)
-        attitudeValues.yaw += 360;
+        attitudeValues.roll    = ahrs.getRoll();
+        attitudeValues.pitch   = ahrs.getPitch();
+        attitudeValues.heading = map_(ahrs.getYaw(), 0, 360, 360, 0);
+    } else {
+        computeOrientation(attitudeValues.accRateRoll, attitudeValues.accRatePitch, attitudeValues.accRateYaw, &roll, &pitch);
+        headingCorrection = computeHeading(attitudeValues.magX, attitudeValues.magY, attitudeValues.magZ, roll, -pitch);
+        // headingCorrection = 0;
+        
+        roll              -= config.offsetRoll;
+        pitch             -= config.offsetPitch;
+        headingCorrection -= config.offsetYaw;
+        //kalman.setAngles(roll, pitch, headingCorrection);
+        ahrs.begin(ATTITUDE_LOOP_FREQ, roll, pitch, map_(headingCorrection, 0, 360, 360, 0));
+
+        attitudeValues.roll    = roll;
+        attitudeValues.pitch   = pitch;
+        attitudeValues.heading = headingCorrection;
+    }
+
+    // attitudeValues.roll    = kalman.getRoll();
+    // attitudeValues.pitch   = kalman.getPitch();
+    // attitudeValues.heading = ahrs.getYaw();
+
+    // attitudeValues.roll    = ahrs.getRoll();
+    // attitudeValues.pitch   = ahrs.getPitch();
+    // attitudeValues.heading = ahrs.getYaw();
+
+    if(attitudeValues.heading > 360)
+        attitudeValues.heading -= 360;
+    if(attitudeValues.heading < 0)
+        attitudeValues.heading += 360;
+
+    attitudeValues.yaw = attitudeValues.heading;
+
     if(attitudeValues.yaw > 180)
         attitudeValues.yaw -= 360;
 }
@@ -128,8 +121,8 @@ float SensorsModule::computeHeading(int16_t magAxisX, int16_t magAxisY, int16_t 
     float compass_x_horizontal, compass_y_horizontal, actual_compass_heading;
     //The compass values change when the roll and pitch angle of the quadcopter changes. That's the reason that the x and y values need to calculated for a virtual horizontal position.
     //The 0.0174533 value is phi/180 as the functions are in radians in stead of degrees.
-    compass_x_horizontal = (float)magAxisX * cos(pitch * -0.0174533) + (float)magAxisY * sin(roll * 0.0174533) * sin(pitch * -0.0174533) - (float)magAxisZ * cos(roll * 0.0174533) * sin(pitch * -0.0174533);
-    compass_y_horizontal = (float)magAxisY * cos(roll * 0.0174533) + (float)magAxisZ * sin(roll * 0.0174533);
+    compass_y_horizontal = (float)magAxisX * sin(roll * 0.0174533) * sin(pitch * 0.0174533) + (float)magAxisY * cos(roll * 0.0174533) - (float)magAxisZ * sin(roll * 0.0174533) * cos(pitch * 0.0174533);
+    compass_x_horizontal = (float)magAxisX * cos(pitch * 0.0174533) + (float)magAxisZ * sin(pitch * 0.0174533);
 
     //Now that the horizontal values are known the heading can be calculated. With the following lines of code the heading is calculated in degrees.
     //Please note that the atan2 uses radians in stead of degrees. That is why the 180/3.14 is used.
@@ -149,8 +142,8 @@ float SensorsModule::computeHeading(int16_t magAxisX, int16_t magAxisY, int16_t 
     return actual_compass_heading;
 }
 
-float SensorsModule::computeVerticalSpeed() {
-    altitudeValues.vertical_speed = (altitudeValues.alt - previousAlt) / (1.0f / ALTITUDE_LOOP_FREQ);
-    previousAlt = altitudeValues.alt;
-    return 0.0f;
+void SensorsModule::computeOrientation(float ax, float ay, float az, float *roll, float *pitch) {
+    // Compute roll (phi) and pitch (theta) using accelerometer data
+    *roll = atan2(ay, az) * 180.0 / M_PI;  // Convert to degrees
+    *pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / M_PI;  // Convert to degrees
 }

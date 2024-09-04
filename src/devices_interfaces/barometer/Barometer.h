@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <cstddef>
 #include "../low-level/I2cDevice.h"
-#include "devices/dps310/Dps3xx.h"
 #include "../../structs.h"
+#include "devices/LPS22DF/LPS.h"
 
 class Barometer {
 public:
@@ -18,9 +18,10 @@ public:
     int8_t updateAndGetData(struct altitudeData &values);
 private:
     I2cDevice *i2c;
-    Dps3xx baro = Dps3xx();
-
-    float computeAltitude(float pres);
+    LPS ps;
+    float pressureSlow = 0;
+    float refAltitude = 0;
+    bool isRefAltitudeUpdated = false;
 };
 
 #endif

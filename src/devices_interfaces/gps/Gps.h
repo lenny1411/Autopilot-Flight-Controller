@@ -9,7 +9,7 @@
 #include <cstddef>
 #include "structs.h"
 #include "devices_interfaces/low-level/UartDevice.h"
-#include "PointPerfect/PointPerfectClient.h"
+// #include "NtripClient/NtripClient.h"
 
 class Gps {
 public:
@@ -21,10 +21,10 @@ public:
     int8_t updateAndGetData(struct positionData &values);
 private:
     UartDevice uart;
-    PointPerfectClient pointPerfectClient;
+    // NtripClient ntripClient;
 
     void sendGpsConfig();
-    bool NMEA_GGA_decode(char* nmeaFrame, double &lat, double &lon);
+    int8_t NMEA_GGA_decode(char* nmeaFrame, double &lat, double &lon);
 };
 
 #endif //AUTOPILOT_FLIGHT_CONTROLLER_SOFTWARE_GPS_H

@@ -18,6 +18,10 @@ ReceiverModule::ReceiverModule() {
 
 int8_t ReceiverModule::init()
 {
+    MessageManager::getInstance().subscribe(STATE_TOPIC, [this](const void* message) -> void {
+        state = *(static_cast<const droneState *>(message));
+    });
+
     return receiver.init();
 }
 
@@ -39,7 +43,6 @@ void ReceiverModule::run()
 
 void ReceiverModule::getDataFromNodesAndReceiver()
 {
-    commanderStateNode.get(state);
     receiver.updateAndGetData(values);
 }
 
@@ -55,9 +58,10 @@ float ReceiverModule::computeYawRateFromChannel(uint16_t channel)
 
 void ReceiverModule::setDataToNodes()
 {
-    receiverNode.set(values);
-    if(state.state == LEVEL)
-        pidSetpointNode.set(setpoint);
+    MessageManager::getInstance().publish(RECEIVER_TOPIC, &values);
+    if(state == LEVEL)
+         MessageManager::getInstance().publish(ANGLE_SETPOINT_TOPIC, &setpoint);
+
 }
 
 

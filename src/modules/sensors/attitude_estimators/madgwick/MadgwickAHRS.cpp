@@ -249,3 +249,27 @@ void Madgwick::computeAngles()
 	anglesComputed = 1;
 }
 
+// roll (x), pitch (y), yaw (z), angles are in deg
+void Madgwick::computeQuat(float roll, float pitch, float yaw)
+{
+    // Abbreviations for the various angular functions
+
+	roll  *= 0.0174533f;
+	pitch *= 0.0174533f;
+	yaw   -= 180;
+	yaw   *= 0.0174533f;
+
+    float cr = cos(roll  * 0.5);
+    float sr = sin(roll  * 0.5);
+    float cp = cos(pitch * 0.5);
+    float sp = sin(pitch * 0.5);
+    float cy = cos(yaw   * 0.5);
+    float sy = sin(yaw   * 0.5);
+
+    q0 = cr * cp * cy + sr * sp * sy;
+    q1 = sr * cp * cy - cr * sp * sy;
+    q2 = cr * sp * cy + sr * cp * sy;
+    q3 = cr * cp * sy - sr * sp * cy;
+}
+
+

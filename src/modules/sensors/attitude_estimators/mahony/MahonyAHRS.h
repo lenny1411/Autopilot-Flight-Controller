@@ -28,13 +28,20 @@ private:
 	char anglesComputed;
 	static float invSqrt(float x);
 	void computeAngles();
-
+	void computeQuat(float roll, float pitch, float yaw);
 //-------------------------------------------------------------------------------------------
 // Function declarations
 
 public:
 	Mahony();
-	void begin(float sampleFrequency) { invSampleFreq = 1.0f / sampleFrequency; }
+	void begin(float sampleFrequency, float initRoll, float initPitch, float initYaw) { 
+		integralFBx = 0.0f;
+		integralFBy = 0.0f;
+		integralFBz = 0.0f;
+		anglesComputed = 0;
+		invSampleFreq = 1.0f / sampleFrequency;
+		computeQuat(initRoll, initPitch, initYaw);
+	}
 	void update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 	void updateIMU(float gx, float gy, float gz, float ax, float ay, float az);
     void setConfig(float twoKp, float twoKi);

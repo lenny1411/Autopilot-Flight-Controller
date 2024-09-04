@@ -16,13 +16,13 @@ const uint16_t pins[] = {ESC1_PIN, ESC3_PIN, ESC6_PIN, ESC4_PIN};
 #endif
 
 #if NUMBER_OF_MOTORS == 6
-const uint16_t pins[] = {ESC1_PIN, ESC2_PIN, ESC3_PIN, ESC4_PIN, ESC5_PIN, ESC6_PIN};
+const uint16_t pins[] = {ESC6_PIN, ESC1_PIN, ESC2_PIN, ESC3_PIN, ESC4_PIN, ESC5_PIN};
 #endif
 
 class Motors {
 public:
     int8_t init();
-    void setMotors(struct motorsSetpoint setpoint);
+    void setMotors(struct motorsData setpoint);
     int8_t deinit();
 private:
     int8_t initPin(uint8_t motorIndex, uint8_t pin, float pwmFreq);

@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <cstddef>
 #include "devices_interfaces/low-level/UartDevice.h"
-#include "devices/tf-mini-plus/TFMPlus.h"
+#include "devices/tf02-pro/TF02Pro.h"
 #include "structs.h"
 
 class Lidar {
@@ -21,7 +21,7 @@ public:
     int8_t updateAndGetData(altitudeData &values);
 private:
     UartDevice uart;
-    TFMPlus lidar;
+    TF02Pro lidar;
 };
 
 

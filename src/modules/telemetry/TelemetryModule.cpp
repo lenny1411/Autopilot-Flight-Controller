@@ -1,42 +1,41 @@
 #include "TelemetryModule.h"
 
 TelemetryModule::TelemetryModule() {
-    attitudeConfValues = {
-        OFFSET_ROLL, OFFSET_PITCH, OFFSET_YAW, 
-        0, 
-        PARAM_1, PARAM_2, 
-        false};
-    pidConfValues = {
-        P_ROLL_PITCH, P_ROLL_PITCH, P_YAW,
-        I_ROLL_PITCH, I_ROLL_PITCH, I_YAW,
-        D_ROLL_PITCH, D_ROLL_PITCH, D_YAW,
-        false
-    };
-    pidNavConfValues = {
-        P_NAV, I_NAV, D_NAV,
-        0, 0,
-        0, 0,
-        false
-    };
-    pidAltConfValues = {
-        P_ALT, I_ALT, D_ALT,
-        false
-    };
-    stateConf = { LEVEL };
-
     timestamp = 0;
     loopPeriod = 0;
     count = 0;
 }
 
 int8_t TelemetryModule::init() {
-    commanderStateConfNode.set(stateConf);
-
     if(telemetry.init() != 0)
         return -1;
 
-    while (!telemetry.isConfigDataAvailable()); //Wait for first data from ground station
+    while (!telemetry.isGroundStationAvailable()); //Wait for first data from ground station
     telemetry.resetRecvBuffer();
+
+    MessageManager::getInstance().subscribe(SENSOR_TOPIC, [this](const void * message) -> void {
+        attitudeValues = *(static_cast<const attitudeData *>(message));
+    });
+    
+    MessageManager::getInstance().subscribe(ALTITUDE_SENSOR_TOPIC, [this](const void * message) -> void {
+        altitudeValues = *(static_cast<const altitudeData *>(message));
+    });
+
+    MessageManager::getInstance().subscribe(RECEIVER_TOPIC, [this](const void * message) -> void {
+        receiverValues = *(static_cast<const receiverData *>(message));
+    });
+
+    MessageManager::getInstance().subscribe(POSITION_TOPIC, [this](const void * message) -> void {
+        positionValues = *(static_cast<const positionData *>(message));
+    });
+
+    MessageManager::getInstance().subscribe(MOTOR_TOPIC, [this](const void * message) -> void {
+        motorsValues = *(static_cast<const motorsData *>(message));
+    });
+
+    MessageManager::getInstance().subscribe(STATE_TOPIC, [this](const void * message) -> void {
+        state = *(static_cast<const droneState *>(message));
+    });
 
     sendConfigValues();
     return 0;
@@ -45,13 +44,12 @@ int8_t TelemetryModule::init() {
 void TelemetryModule::run() {
     timestamp = get_ms_count();
 
-    getDataFromNodes();
     sendTelemetryValues();
     processDataFromGroundStation();
 
     loopPeriod = get_ms_count() - timestamp;
 
-    if(state.state != DISARMED) {
+    if(state != DISARMED) {
         count++;
     }
 
@@ -62,27 +60,15 @@ void TelemetryModule::sendConfigValues() {
     telemetry.sendConfigValues(
         attitudeConfValues,
         pidConfValues,
-        pidAltConfValues,
         pidNavConfValues
     );
-}
-
-void TelemetryModule::getDataFromNodes() {
-    receiverNode.get(receiverValues);
-    attitudeNode.get(attitudeValues);
-    positionNode.get(positionValues);
-    altitudeNode.get(altitudeValues);
-    motorsNode.get(motorsValues);
-    commanderStateNode.get(state);
-    pidOutputNode.get(pidOutputValues);
 }
 
 void TelemetryModule::sendTelemetryValues() {
     telemetry.sendTelemetryValues(
         attitudeValues, 
         altitudeValues, 
-        positionValues, 
-        pidOutputValues, 
+        positionValues,  
         receiverValues, 
         motorsValues, 
         state, 
@@ -91,11 +77,10 @@ void TelemetryModule::sendTelemetryValues() {
 }
 
 void TelemetryModule::processDataFromGroundStation() {
-    if(telemetry.isConfigDataAvailable()) {
+    if(telemetry.isGroundStationAvailable()) {
         if(telemetry.getConfigData(
             &attitudeConfValues,
             &pidConfValues,
-            &pidAltConfValues,
             &pidNavConfValues,
             &motorsSetpointValues,
             &navSetpointValues,
@@ -110,14 +95,12 @@ void TelemetryModule::processDataFromGroundStation() {
 }
 
 void TelemetryModule::setDataToNodes() {
-    if(state.state == droneState::DISARMED || state.state == droneState::MANU) {
-        attitudeConfigNode.set(attitudeConfValues);
-        pidConfigNode.set(pidConfValues);
-        pidAltConfigNode.set(pidAltConfValues);
-        pidNavConfigNode.set(pidNavConfValues);
-        motorsConfigNode.set(motorsSetpointValues);
-        commanderStateConfNode.set(stateConf);
-    } else if(state.state == droneState::NAVIGATION) {
-        navigationSetpointNode.set(navSetpointValues);
+    if(state == droneState::NAVIGATION) {
+        MessageManager::getInstance().publish(NAVIGATION_TOPIC, &navSetpointValues);
+    } else {
+        MessageManager::getInstance().publish(SENSOR_CONFIG_TOPIC, &attitudeConfValues);
+        MessageManager::getInstance().publish(PID_CONFIG_TOPIC, &pidConfValues);
+        MessageManager::getInstance().publish(MOTOR_SETPOINT_TOPIC, &motorsSetpointValues);
+        MessageManager::getInstance().publish(STATE_TOPIC, &stateConf);
     }
 }

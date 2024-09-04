@@ -4,7 +4,7 @@
 #include <cstdint>
 #include "../../devices_interfaces/telemetry/Telemetry.h"
 #include "../../devices_interfaces/telemetry/WirelessInterface.h"
-#include "../../resources/nodes.h"
+#include "../../msg/MessageManager.h"
 #include "../../utils/utils.h"
 
 class TelemetryModule {
@@ -21,17 +21,15 @@ private:
     struct positionData positionValues;
     struct altitudeData altitudeValues;
     struct motorsData motorsValues;
-    struct pidOutput pidOutputValues;
-    struct commanderState state;
+    enum droneState state;
 
     // Telemetry -> Drone
     struct navigationSetpoint navSetpointValues;
-    struct motorsSetpoint motorsSetpointValues;
+    struct motorsData motorsSetpointValues;
     struct attitudeConfig attitudeConfValues;
     struct pidConfig pidConfValues;
     struct pidNavigationConfig pidNavConfValues;
-    struct pidAltitudeConfig pidAltConfValues;
-    struct commanderState stateConf;
+    enum droneState stateConf;
     
     uint64_t timestamp, loopPeriod, count;
     bool isFirstDataReceived = false;

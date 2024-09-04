@@ -8,11 +8,14 @@
 #include <cstdint>
 #include "../../devices_interfaces/low-level/I2cDevice.h"
 #include "../../devices_interfaces/imu/Imu.h"
-#include "../../devices_interfaces/barometer/Barometer.h"
 #include "attitude_estimators/mahony/MahonyAHRS.h"
+#include "attitude_estimators/kalman/KalmanFilters.h"
 #include "../../config.h"
 #include "../../utils/utils.h"
-#include "../../resources/nodes.h"
+#include "../../msg/MessageManager.h"
+#include "attitude_estimators/madgwick/MadgwickAHRS.h"
+
+#define EARTH_GRAVITY 9.81 // m/s/s
 
 class SensorsModule {
 public:
@@ -21,22 +24,22 @@ public:
     void run();
 private:
     Imu imu;
-    Mahony ahrs;
-    Barometer baro;
+    Madgwick ahrs;
+    enum droneState state;
 
-    struct altitudeData altitudeValues;
+    // struct altitudeData altitudeValues;
     struct attitudeData attitudeValues;
     struct attitudeConfig config;
-    uint64_t timestamp = 0;
+    uint64_t timestamp = 0, prevTimestamp = 0;
     float previousAlt = 0;
     uint16_t count = 0;
     float altitudeOffset = 0;
     float headingCorrection = 0;
     
-    void getDataFromNodesAndSensors();
+    void getDataFromSensors();
     void computeData();
+    void computeOrientation(float ax, float ay, float az, float *roll, float *pitch);
     float computeHeading(int16_t magX, int16_t magY, int16_t magZ, float roll, float pitch);
-    float computeVerticalSpeed();
 };
 
 #endif //AUTOPILOT_FLIGHT_CONTROLLER_SOFTWARE_ATTITUDEMODULE_H

@@ -21,7 +21,6 @@ public:
     int8_t sendConfigValues(
         struct attitudeConfig &attitudeConf,
         struct pidConfig &pidConf,
-        struct pidAltitudeConfig &altitudeConf,
         struct pidNavigationConfig &navConf);
 
 
@@ -29,25 +28,23 @@ public:
             struct attitudeData &attitude,
             struct altitudeData &altitude,
             struct positionData &position,
-            struct pidOutput &pid,
             struct receiverData &receiver,
             struct motorsData &motors,
-            struct commanderState &commander,
+            enum droneState &state,
             uint64_t timestamp,
             uint64_t loopPeriod);
 
-    bool isConfigDataAvailable();
+    bool isGroundStationAvailable();
 
     void resetRecvBuffer();
 
     int8_t getConfigData(
             struct attitudeConfig *attitude,
             struct pidConfig *pid,
-            struct pidAltitudeConfig *altitude,
             struct pidNavigationConfig *navConf,
-            struct motorsSetpoint *motors,
+            struct motorsData *motors,
             struct navigationSetpoint *navSetpoint,
-            struct commanderState *commander);
+            enum droneState *state);
 private:
     WifiManager wifiManager;
 };

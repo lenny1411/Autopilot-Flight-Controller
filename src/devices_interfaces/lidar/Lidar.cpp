@@ -5,14 +5,16 @@
 #include "Lidar.h"
 
 Lidar::Lidar() {
-    lidar = TFMPlus(&uart);
+    lidar = TF02Pro(&uart);
 }
 
 Lidar::~Lidar() {
     deinit();
 }
 
-int8_t Lidar::init() {
+int8_t Lidar::
+
+init() {
     uart.init(LIDAR_UART_PORT, LIDAR_UART_TX, LIDAR_UART_RX, LIDAR_UART_BAUD);
     return lidar.init();
 }

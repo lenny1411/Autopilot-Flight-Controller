@@ -27,7 +27,6 @@ struct attitudeData {
     float roll;
     float pitch;
     float yaw;
-    float yawCorrected;
     float offsetRoll;
     float offsetPitch;
     float offsetYaw;
@@ -37,12 +36,10 @@ struct attitudeData {
 };
 
 struct attitudeConfig {
-    float offsetRoll;
-    float offsetPitch;
-    float offsetYaw;
-    float heading;
-    float param1, param2;
-    bool newConfig;
+    float offsetRoll = OFFSET_ROLL;
+    float offsetPitch = OFFSET_PITCH;
+    float offsetYaw = OFFSET_YAW;
+    float param1 = PARAM_1, param2 = PARAM_2;
 };
 
 struct pidSetpoint {
@@ -57,8 +54,7 @@ struct pidOutput {
     int16_t out_pitch;
     int16_t out_yaw;
     int16_t out_alt;
-    int16_t outBatteryCompensation;
-    uint64_t loopPeriod;
+    // int16_t outBatteryCompensation;
 };
 
 struct positionData {
@@ -77,17 +73,18 @@ struct positionData {
 };
 
 struct pidConfig {
-    float proll, ppitch, pyaw;
-    float iroll, ipitch, iyaw;
-    float droll, dpitch, dyaw;
+    // float proll = P_ROLL_PITCH, ppitch = P_ROLL_PITCH, pyaw = P_YAW;
+    // float iroll = I_ROLL_PITCH, ipitch = I_ROLL_PITCH, iyaw = I_YAW;
+    // float droll = D_ROLL_PITCH, dpitch = D_ROLL_PITCH, dyaw = D_YAW;
+    float proll = P_ROLL_PITCH_ANGLE, ppitch = P_ROLL_PITCH_ANGLE, pyaw = P_YAW_ANGLE;
+    float iroll = I_ROLL_PITCH_ANGLE, ipitch = I_ROLL_PITCH_ANGLE, iyaw = I_YAW_ANGLE;
+    float droll = D_ROLL_PITCH_ANGLE, dpitch = D_ROLL_PITCH_ANGLE, dyaw = D_YAW_ANGLE;
+    float pAltitude = P_ALT, iAltitude = I_ALT, dAltitude = D_ALT;
     bool newConfig;
 };
 
 struct pidNavigationConfig {
-    float pnav, inav, dnav;
-    float maxRollAngle, maxPitchAngle;
-    float minRollAngle, minPitchAngle;
-    bool newConfig;
+    float pnav = P_NAV, inav = I_NAV, dnav = D_NAV;
 };
 
 struct receiverData {
@@ -100,12 +97,8 @@ struct altitudeData {
     std::string status;
     float vertical_speed;
     float alt;
+    float press;
     uint64_t loopPeriod;
-};
-
-struct pidAltitudeConfig {
-    float pAltitude, iAltitude, dAltitude;
-    bool newConfig;
 };
 
 struct motorsData {
@@ -115,20 +108,10 @@ struct motorsData {
     uint64_t loopPeriod;
 };
 
-struct motorsSetpoint {
-    uint16_t mot[NUMBER_OF_MOTORS];
-    bool enable;
-};
-
 struct navigationSetpoint
 {
     double lat;
     double lon;
-};
-
-
-struct commanderState {
-    enum droneState state;
 };
 
 #endif //AUTOPILOT_FLIGHT_CONTROLLER_SOFTWARE_STRUCTS_H

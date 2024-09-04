@@ -3,7 +3,7 @@
 //
 
 #include "utils.h"
-#include "freertos/FreeRTOS.h"
+#include "FreeRTOS.h"
 #include "freertos/task.h"
 
 void delay_milis(uint32_t milis) {

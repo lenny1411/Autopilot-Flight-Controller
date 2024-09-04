@@ -91,14 +91,9 @@ int8_t IST8310::write_regs(uint8_t reg_addr,uint8_t *data, uint16_t len) {
 
 int8_t IST8310::updateAndGetData(struct attitudeData &values)
 {
-	if(!isDataRequested) {
-		dataRequest();
-		isDataRequested = true;
-	}
-
+	dataRequest();
 	if(!isDataRdy())
 		return -1;
-
 	read(&values.magX, &values.magY, &values.magZ);
 	isDataRequested = false;
 	return 0;
@@ -111,7 +106,7 @@ void IST8310::dataRequest()
 }
 
 int8_t IST8310::read_regs(uint8_t reg_addr,uint8_t *data, uint16_t len) {
-	w->writeByte(DEVICE_ADDR, (char)reg_addr, false);
-	w->readBytes(DEVICE_ADDR, (char *)data, len);
+    w->writeAndReadBytes(DEVICE_ADDR, (char *)&reg_addr, 1,(char *)data, len);
+
 	return 0;
 }

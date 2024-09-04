@@ -14,7 +14,7 @@ int8_t Motors::init() {
     return 0;
 }
 
-void Motors::setMotors(struct motorsSetpoint setpoint) {
+void Motors::setMotors(struct motorsData setpoint) {
     uint8_t index = 0;
     for(index = 0; index < NUMBER_OF_MOTORS; index++)
         setPulse(index, setpoint.mot[index]);
