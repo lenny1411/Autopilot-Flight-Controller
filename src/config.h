@@ -43,13 +43,13 @@
 #define I_YAW 0.01
 #define D_YAW 0.1
 
-#define P_ALT 1.5
+#define P_ALT 1.1
 #define I_ALT 0.00
-#define D_ALT 0.0
+#define D_ALT 0.1
 
-#define P_NAV 0.2
-#define I_NAV 0
-#define D_NAV 0.05
+#define P_NAV 0.5
+#define I_NAV 0.001
+#define D_NAV 0.07
 
 #define OFFSET_ROLL  -0.04
 #define OFFSET_PITCH -0.05
@@ -96,8 +96,8 @@
 #define MAX_YAW_CHAN_THRESHOLD 1550
 #define MIN_YAW_CHAN_THRESHOLD 1450
 
-#define MAX_THROTTLE_CHAN_THRESHOLD 1600
-#define MIN_THROTTLE_CHAN_THRESHOLD 1400
+#define MAX_THROTTLE_CHAN_THRESHOLD 1525
+#define MIN_THROTTLE_CHAN_THRESHOLD 1475
 
 #define MAX_SERVO_CHAN_THRESHOLD 1550
 #define MIN_SERVO_CHAN_THRESHOLD 1450

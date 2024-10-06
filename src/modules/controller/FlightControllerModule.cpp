@@ -73,7 +73,7 @@ int8_t FlightControllerModule::init() {
     ratePitchPid.setOutputRange(-200, 200);
     rateYawPid.setOutputRange(  -200, 200);
 
-    altitudePid.setOutputRange( -200, 200);
+    altitudePid.setOutputRange( -300, 300);
 
     if(motors.init() != 0)
         return -1;
@@ -90,6 +90,7 @@ void FlightControllerModule::run() {
     getSensor();
     computeRateSetpoints();
     computePanTiltSetpoints();
+    computeNextDroneState();
     processDroneState();
     computeOutputValues();
     if(state != MANU) computeMotorsValues();
@@ -139,27 +140,22 @@ void FlightControllerModule::computeYaw() {
     }
 }
 
+void FlightControllerModule::computeNextDroneState() {
+    isThrottleDisabled      = receiverValues.chan[THROTTLE_CHAN] < MIN_THROTTLE_THRESOLD;
+    isDisarmedChanTriggered = receiverValues.chan[DISARMED_CHAN] >= MAX_CHANNEL_VALUE;
+    isRollChanMoved         = receiverValues.chan[ROLL_CHAN]  > MAX_CHANNEL_THRESOLD || receiverValues.chan[ROLL_CHAN]  < MIN_CHANNEL_THRESOLD;
+    isPitchChanMoved        = receiverValues.chan[PITCH_CHAN] > MAX_CHANNEL_THRESOLD || receiverValues.chan[PITCH_CHAN] < MIN_CHANNEL_THRESOLD;
+    isCameraControlEnable   = receiverValues.chan[CAMERA_INIT_POS_CHAN] == MAX_CHANNEL_VALUE;
+    isPosHoldMode           = receiverValues.chan[MODE_SELECTION_CHAN] == POS_HOLD_CHAN_5_VALUE;
+    isNavigationMode        = receiverValues.chan[MODE_SELECTION_CHAN] == NAVIGATION_CHAN_5_VALUE;
+    isThrottleMoved         = receiverValues.chan[THROTTLE_CHAN] > MAX_THROTTLE_CHAN_THRESHOLD || receiverValues.chan[THROTTLE_CHAN] < MIN_THROTTLE_CHAN_THRESHOLD;
+    isAltHoldleEnable       = isPosHoldMode || isNavigationMode;
+}
+
 void FlightControllerModule::processDroneState() {
     if(stateTelemtry == MANU) {
         state = MANU;
-    } else if(receiverValues.chan[THROTTLE_CHAN] < MIN_THROTTLE_THRESOLD || receiverValues.chan[DISARMED_CHAN] >= MAX_CHANNEL_VALUE || stateTelemtry == DISARMED) {
-        state = DISARMED;
-    } else if((receiverValues.chan[ROLL_CHAN] > MAX_CHANNEL_THRESOLD || receiverValues.chan[ROLL_CHAN] < MIN_CHANNEL_THRESOLD
-           || receiverValues.chan[PITCH_CHAN] > MAX_CHANNEL_THRESOLD || receiverValues.chan[PITCH_CHAN] < MIN_CHANNEL_THRESOLD)
-           && receiverValues.chan[CAMERA_INIT_POS_CHAN] == MIN_CHANNEL_VALUE) {
-        state = LEVEL;
-    } else if(receiverValues.chan[MODE_SELECTION_CHAN] == POS_HOLD_CHAN_5_VALUE) {
-        state = POS_HOLD; //TODO Test purpose
-    } else if(receiverValues.chan[MODE_SELECTION_CHAN] == NAVIGATION_CHAN_5_VALUE) {
-        state = NAVIGATION; //TODO Test purpose
-    } else {
-        state = LEVEL; //TODO Test purpose
-    }
-
-
-    if(state == LEVEL || state == NAVIGATION || state == POS_HOLD) {
-        computeYaw();
-    } else if(state == DISARMED) {
+    } else if(isThrottleDisabled || isDisarmedChanTriggered || stateTelemtry == DISARMED) {
         rollPid.clear();
         pitchPid.clear();
         yawPid.clear();
@@ -171,6 +167,24 @@ void FlightControllerModule::processDroneState() {
         altitudePid.clear();
 
         offsetYaw = attitudeValues.yaw;
+
+        state = DISARMED;
+    } else if((isRollChanMoved || isPitchChanMoved) && !isCameraControlEnable) {
+        computeYaw();
+
+        state = LEVEL;
+    } else if(isPosHoldMode) {
+        computeYaw();
+
+        state = POS_HOLD;
+    } else if(isNavigationMode) {
+        computeYaw();
+
+        state = NAVIGATION;
+    } else {
+        computeYaw();
+
+        state = LEVEL;
     }
 
     altitudeSetpoint = state == LEVEL ? altitudeValues.alt : altitudeSetpoint;
@@ -180,13 +194,10 @@ void FlightControllerModule::computeOutputValues() {
     pidValues.out_roll  = rateRollPid.step(rollRateSetpoint, attitudeValues.gyroRateRoll);
     pidValues.out_pitch = ratePitchPid.step(pitchRateSetpoint, attitudeValues.gyroRatePitch);
     pidValues.out_yaw   = rateYawPid.step(yawRateSetpoint, -attitudeValues.gyroRateYaw);
-    pidValues.out_alt   = state == POS_HOLD || state == NAVIGATION ? altitudePid.step(altitudeSetpoint, altitudeValues.alt) : 0;
+    pidValues.out_alt   = isAltHoldleEnable ? altitudePid.step(altitudeSetpoint, altitudeValues.alt) : 0;
 }
 
 void FlightControllerModule::computeMotorsValues() {
-    isThrottleMoved = receiverValues.chan[THROTTLE_CHAN] > MAX_THROTTLE_CHAN_THRESHOLD || receiverValues.chan[THROTTLE_CHAN] < MIN_THROTTLE_CHAN_THRESHOLD;
-    isNavPosMode = state == POS_HOLD || state == NAVIGATION;
-    isAltHoldleEnable = isNavPosMode /* && !isThrottleMoved */;
 #if NUMBER_OF_MOTORS == 4
     motorValues.mot[0] = receiverValues.chan[THROTTLE_CHAN] + pidValues.out_roll - pidValues.out_pitch - pidValues.out_yaw + pidValues.out_alt;
     motorValues.mot[1] = receiverValues.chan[THROTTLE_CHAN] - pidValues.out_roll - pidValues.out_pitch + pidValues.out_yaw + pidValues.out_alt;

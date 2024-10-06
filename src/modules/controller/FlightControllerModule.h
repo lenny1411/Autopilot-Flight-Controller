@@ -42,6 +42,13 @@ private:
     bool isThrottleMoved;
     bool isNavPosMode;
     bool isAltHoldleEnable;
+    bool isThrottleDisabled;
+    bool isDisarmedChanTriggered;
+    bool isRollChanMoved;
+    bool isPitchChanMoved;
+    bool isCameraControlEnable;
+    bool isPosHoldMode;
+    bool isNavigationMode;
 
     uint16_t panPulse = MID_CHANNEL_VALUE, tiltPulse = MID_CHANNEL_VALUE; 
 
@@ -49,6 +56,7 @@ private:
     void computePanTiltSetpoints();
     void computeRateSetpoints();
     void computeYaw();
+    void computeNextDroneState();
     void processDroneState();
     void computeMotorsValues();
     void computeOutputValues();
