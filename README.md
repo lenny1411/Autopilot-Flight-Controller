@@ -32,8 +32,8 @@ Coming soon.
 ## Monitoring and telemetry:
 [Android App](https://github.com/Embedded-MUTEX-1/DroneMonitoringApp)
 
-## First flight:
-https://github.com/Embedded-MUTEX-1/Autopilot-Flight-Controller/assets/105748537/e9cec997-3c3b-4aa0-ba62-bae3b584f156
+## Flight in position hold and altitude hold mode (V1) :
+https://github.com/user-attachments/assets/1a04a159-e1b1-4e9f-b5fd-9d827e6439e0
 
 ## Software architecture :
 ![Autopilot](https://github.com/Embedded-MUTEX-1/Autopilot-Flight-Controller/assets/105748537/b565809f-8e8a-446c-8b6c-04ee01bfed2f)
