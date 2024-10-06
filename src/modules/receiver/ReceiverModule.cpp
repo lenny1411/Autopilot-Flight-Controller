@@ -9,7 +9,7 @@ float computeAngleFromChannel(uint16_t channel) {
 }
 
 float computeYawRateFromChannel(uint16_t channel) {
-    return map_((float)channel,   MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE,   -MAX_ANGLE_RATE, MAX_ANGLE_RATE);   // deg/sec
+    return map_((float)channel,   MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE,   -MAX_YAW_ANGLE_RATE, MAX_YAW_ANGLE_RATE);   // deg/sec
 }
 
 ReceiverModule::ReceiverModule() {
@@ -59,8 +59,7 @@ float ReceiverModule::computeYawRateFromChannel(uint16_t channel)
 void ReceiverModule::setDataToNodes()
 {
     MessageManager::getInstance().publish(RECEIVER_TOPIC, &values);
-    if(state == LEVEL)
-         MessageManager::getInstance().publish(ANGLE_SETPOINT_TOPIC, &setpoint);
+    MessageManager::getInstance().publish(ANGLE_SETPOINT_TOPIC, &setpoint);
 
 }
 

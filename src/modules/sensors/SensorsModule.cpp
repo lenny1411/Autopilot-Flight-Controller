@@ -59,11 +59,15 @@ void SensorsModule::run() {
 
 void SensorsModule::getDataFromSensors() {
     imu.updateAndGetData(attitudeValues);
-    imu.getMagData(attitudeValues);
+    if(state == DISARMED) imu.getMagData(attitudeValues);
 }
 
 void SensorsModule::computeData() {
     float roll, pitch;
+
+    attitudeValues.accRateRoll  -= config.offsetRoll;
+    attitudeValues.accRatePitch -= config.offsetPitch;
+    attitudeValues.accRateYaw   -= config.offsetYaw;
 
     if(state != DISARMED) {
         ahrs.updateIMU(
@@ -85,11 +89,7 @@ void SensorsModule::computeData() {
     } else {
         computeOrientation(attitudeValues.accRateRoll, attitudeValues.accRatePitch, attitudeValues.accRateYaw, &roll, &pitch);
         headingCorrection = computeHeading(attitudeValues.magX, attitudeValues.magY, attitudeValues.magZ, roll, -pitch);
-        // headingCorrection = 0;
-        
-        roll              -= config.offsetRoll;
-        pitch             -= config.offsetPitch;
-        headingCorrection -= config.offsetYaw;
+
         //kalman.setAngles(roll, pitch, headingCorrection);
         ahrs.begin(ATTITUDE_LOOP_FREQ, roll, pitch, map_(headingCorrection, 0, 360, 360, 0));
 

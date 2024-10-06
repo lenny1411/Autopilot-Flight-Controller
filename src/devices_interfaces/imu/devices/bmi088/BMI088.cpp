@@ -657,7 +657,7 @@ int8_t Bmi088Accel::init()
         return -1;
     if(!setRange(Bmi088Accel::RANGE_6G))
         return -1;
-    if(!setOdr(Bmi088Accel::ODR_400HZ_BW_75HZ))
+    if(!setOdr(Bmi088Accel::ODR_400HZ_BW_40HZ))
         return -1;
 
     return 0;
@@ -879,7 +879,7 @@ void Bmi088Accel::readSensor()
   /* accel data */
   uint16_t temp_uint11;
   int16_t accel[3], temp_int11;
-  readRegisters(ACC_ACCEL_DATA_ADDR,9,_buffer);
+  readRegisters(ACC_ACCEL_DATA_ADDR,6,_buffer);
   accel[0] = ((_buffer[1] << 8) | _buffer[0]) -    0;
   accel[1] = ((_buffer[3] << 8) | _buffer[2]) -    0;
   accel[2] = ((_buffer[5] << 8) | _buffer[4]) -    0;

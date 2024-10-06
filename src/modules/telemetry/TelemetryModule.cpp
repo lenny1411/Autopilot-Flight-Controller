@@ -95,12 +95,13 @@ void TelemetryModule::processDataFromGroundStation() {
 }
 
 void TelemetryModule::setDataToNodes() {
-    if(state == droneState::NAVIGATION) {
+    if(stateConf == droneState::NAVIGATION) {
         MessageManager::getInstance().publish(NAVIGATION_TOPIC, &navSetpointValues);
     } else {
         MessageManager::getInstance().publish(SENSOR_CONFIG_TOPIC, &attitudeConfValues);
         MessageManager::getInstance().publish(PID_CONFIG_TOPIC, &pidConfValues);
+        MessageManager::getInstance().publish(NAVIGATION_CONFIG_TOPIC, &pidNavConfValues);
         MessageManager::getInstance().publish(MOTOR_SETPOINT_TOPIC, &motorsSetpointValues);
-        MessageManager::getInstance().publish(STATE_TOPIC, &stateConf);
+        MessageManager::getInstance().publish(TELEMETRY_STATE_TOPIC, &stateConf);
     }
 }

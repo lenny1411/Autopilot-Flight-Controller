@@ -19,7 +19,7 @@ private:
     struct motorsData motorValues;
     struct attitudeData attitudeValues;
     struct altitudeData altitudeValues;
-    struct pidSetpoint anglesSetpoint;
+    struct pidSetpoint anglesSetpoint, anglesSetpointNav;
     struct receiverData receiverValues;
     struct motorsData setpoint;
     enum droneState state;
@@ -43,9 +43,12 @@ private:
     bool isNavPosMode;
     bool isAltHoldleEnable;
 
+    uint16_t panPulse = MID_CHANNEL_VALUE, tiltPulse = MID_CHANNEL_VALUE; 
 
     void getSensor();
+    void computePanTiltSetpoints();
     void computeRateSetpoints();
+    void computeYaw();
     void processDroneState();
     void computeMotorsValues();
     void computeOutputValues();

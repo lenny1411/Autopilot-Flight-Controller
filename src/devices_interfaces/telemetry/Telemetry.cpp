@@ -90,7 +90,7 @@ int8_t Telemetry::sendTelemetryValues(
     documentTx["accPitch"].set(attitude.accRatePitch);
     documentTx["accYaw"].set(attitude.accRateYaw);
 
-    documentTx["loopTime"].set(motors.loopPeriod);
+    documentTx["loopTime"].set(attitude.loopPeriod);
     documentTx["timestamp"].set(timestamp);
     documentTx["alt"].set(altitude.alt);
     documentTx["vBat"].set(motors.vBat);

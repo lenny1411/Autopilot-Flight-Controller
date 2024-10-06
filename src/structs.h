@@ -73,12 +73,15 @@ struct positionData {
 };
 
 struct pidConfig {
-    // float proll = P_ROLL_PITCH, ppitch = P_ROLL_PITCH, pyaw = P_YAW;
-    // float iroll = I_ROLL_PITCH, ipitch = I_ROLL_PITCH, iyaw = I_YAW;
-    // float droll = D_ROLL_PITCH, dpitch = D_ROLL_PITCH, dyaw = D_YAW;
+#if TELEMETRY_PID_CONFIG == 0
+    float proll = P_ROLL_PITCH, ppitch = P_ROLL_PITCH, pyaw = P_YAW;
+    float iroll = I_ROLL_PITCH, ipitch = I_ROLL_PITCH, iyaw = I_YAW;
+    float droll = D_ROLL_PITCH, dpitch = D_ROLL_PITCH, dyaw = D_YAW;
+#elif TELEMETRY_PID_CONFIG == 1
     float proll = P_ROLL_PITCH_ANGLE, ppitch = P_ROLL_PITCH_ANGLE, pyaw = P_YAW_ANGLE;
     float iroll = I_ROLL_PITCH_ANGLE, ipitch = I_ROLL_PITCH_ANGLE, iyaw = I_YAW_ANGLE;
     float droll = D_ROLL_PITCH_ANGLE, dpitch = D_ROLL_PITCH_ANGLE, dyaw = D_YAW_ANGLE;
+#endif
     float pAltitude = P_ALT, iAltitude = I_ALT, dAltitude = D_ALT;
     bool newConfig;
 };

@@ -6,8 +6,8 @@
 
 NavigationModule::NavigationModule()
 {
-    latitudePid = FastPID(P_NAV, I_NAV, D_NAV, NAVIGATION_LOOP_FREQ, 16, true);
-    longitudePid = FastPID(P_NAV, I_NAV, D_NAV, NAVIGATION_LOOP_FREQ, 16, true);
+    latitudePid = FastPID(P_NAV, I_NAV, D_NAV, NAVIGATION_LOOP_FREQ);
+    longitudePid = FastPID(P_NAV, I_NAV, D_NAV, NAVIGATION_LOOP_FREQ);
 }
 
 int8_t NavigationModule::init()
@@ -39,7 +39,7 @@ int8_t NavigationModule::init()
 
     latitudePid.setOutputRange(-MAX_NAV_ANGLE, MAX_NAV_ANGLE);
     longitudePid.setOutputRange(-MAX_NAV_ANGLE, MAX_NAV_ANGLE);
-
+    
     return 0;
 }
 
@@ -76,7 +76,7 @@ void NavigationModule::processDataAndSetToNodes()
         anglesSetpoint.roll  = ((float)out_lon * cos(anglesValues.heading * 0.017453)) + ((float)out_lat * cos((anglesValues.heading + 90) * 0.017453));
         anglesSetpoint.pitch = ((float)out_lat * cos(anglesValues.heading * 0.017453)) + ((float)out_lon * cos((anglesValues.heading - 90) * 0.017453));
 
-        MessageManager::getInstance().publish(ANGLE_SETPOINT_TOPIC, &anglesSetpoint);
+        MessageManager::getInstance().publish(ANGLE_SETPOINT_NAV_TOPIC, &anglesSetpoint);
     }
     MessageManager::getInstance().publish(POSITION_TOPIC, &values);
 }

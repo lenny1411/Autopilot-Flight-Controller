@@ -1,40 +1,39 @@
 #include "FlightControllerModule.h"
 
 FlightControllerModule::FlightControllerModule() {
-    rollPid = FastPID(P_ROLL_PITCH_ANGLE, I_ROLL_PITCH_ANGLE, D_ROLL_PITCH_ANGLE, FLIGHT_CONTROL_LOOP_FREQ, 16, true);
-    pitchPid = FastPID(P_ROLL_PITCH_ANGLE, I_ROLL_PITCH_ANGLE, D_ROLL_PITCH_ANGLE, FLIGHT_CONTROL_LOOP_FREQ, 16, true);
-    yawPid = FastPID(P_YAW_ANGLE, I_YAW_ANGLE, D_YAW_ANGLE, FLIGHT_CONTROL_LOOP_FREQ, 16, true);
+    rollPid = FastPID(P_ROLL_PITCH_ANGLE, I_ROLL_PITCH_ANGLE, D_ROLL_PITCH_ANGLE, FLIGHT_CONTROL_LOOP_FREQ);
+    pitchPid = FastPID(P_ROLL_PITCH_ANGLE, I_ROLL_PITCH_ANGLE, D_ROLL_PITCH_ANGLE, FLIGHT_CONTROL_LOOP_FREQ);
+    yawPid = FastPID(P_YAW_ANGLE, I_YAW_ANGLE, D_YAW_ANGLE, FLIGHT_CONTROL_LOOP_FREQ);
 
-    rateRollPid = FastPID(P_ROLL_PITCH, I_ROLL_PITCH, D_ROLL_PITCH, FLIGHT_CONTROL_LOOP_FREQ, 16, true);
-    ratePitchPid = FastPID(P_ROLL_PITCH, I_ROLL_PITCH, D_ROLL_PITCH, FLIGHT_CONTROL_LOOP_FREQ, 16, true);
-    rateYawPid = FastPID(P_YAW, I_YAW, D_YAW, FLIGHT_CONTROL_LOOP_FREQ, 16, true);
+    rateRollPid = FastPID(P_ROLL_PITCH, I_ROLL_PITCH, D_ROLL_PITCH, FLIGHT_CONTROL_LOOP_FREQ);
+    ratePitchPid = FastPID(P_ROLL_PITCH, I_ROLL_PITCH, D_ROLL_PITCH, FLIGHT_CONTROL_LOOP_FREQ);
+    rateYawPid = FastPID(P_YAW, I_YAW, D_YAW, FLIGHT_CONTROL_LOOP_FREQ);
 
-    altitudePid = FastPID(P_ALT, I_ALT, D_ALT, FLIGHT_CONTROL_LOOP_FREQ, 16, true);
+    altitudePid = FastPID(P_ALT, I_ALT, D_ALT, FLIGHT_CONTROL_LOOP_FREQ);
     offsetYaw = 0;
 }
 
 int8_t FlightControllerModule::init() {
     MessageManager::getInstance().subscribe(PID_CONFIG_TOPIC, [this](const void * message) -> void {
         const pidConfig pidConfValues = *(static_cast<const pidConfig *>(message));
+#if TELEMETRY_PID_CONFIG == 0
+        rateRollPid.setCoefficients(pidConfValues.proll, pidConfValues.iroll, pidConfValues.droll, FLIGHT_CONTROL_LOOP_FREQ);
+        ratePitchPid.setCoefficients(pidConfValues.ppitch, pidConfValues.ipitch, pidConfValues.dpitch, FLIGHT_CONTROL_LOOP_FREQ);
+        rateYawPid.setCoefficients(pidConfValues.pyaw, pidConfValues.iyaw, pidConfValues.dyaw, FLIGHT_CONTROL_LOOP_FREQ);
 
+        rateRollPid.clear();
+        ratePitchPid.clear();
+        rateYawPid.clear();
+#elif TELEMETRY_PID_CONFIG == 1
         rollPid.setCoefficients(pidConfValues.proll, pidConfValues.iroll, pidConfValues.droll, FLIGHT_CONTROL_LOOP_FREQ);
         pitchPid.setCoefficients(pidConfValues.ppitch, pidConfValues.ipitch, pidConfValues.dpitch, FLIGHT_CONTROL_LOOP_FREQ);
         yawPid.setCoefficients(pidConfValues.pyaw, pidConfValues.iyaw, pidConfValues.dyaw, FLIGHT_CONTROL_LOOP_FREQ);
 
-        // rateRollPid.setCoefficients(pidConfValues.proll, pidConfValues.iroll, pidConfValues.droll, FLIGHT_CONTROL_LOOP_FREQ);
-        // ratePitchPid.setCoefficients(pidConfValues.ppitch, pidConfValues.ipitch, pidConfValues.dpitch, FLIGHT_CONTROL_LOOP_FREQ);
-        // rateYawPid.setCoefficients(pidConfValues.pyaw, pidConfValues.iyaw, pidConfValues.dyaw, FLIGHT_CONTROL_LOOP_FREQ);
-        
-        altitudePid.setCoefficients(pidConfValues.pAltitude, pidConfValues.iAltitude, pidConfValues.dAltitude, FLIGHT_CONTROL_LOOP_FREQ);
-
         rollPid.clear();
         pitchPid.clear();
         yawPid.clear();
-
-        // rateRollPid.clear();
-        // ratePitchPid.clear();
-        // rateYawPid.clear();
-        
+#endif
+        altitudePid.setCoefficients(pidConfValues.pAltitude, pidConfValues.iAltitude, pidConfValues.dAltitude, FLIGHT_CONTROL_LOOP_FREQ);
         altitudePid.clear();
     });
 
@@ -54,23 +53,27 @@ int8_t FlightControllerModule::init() {
         anglesSetpoint = *(static_cast<const pidSetpoint *>(message));
     });
 
+    MessageManager::getInstance().subscribe(ANGLE_SETPOINT_NAV_TOPIC, [this](const void * message) -> void {
+        anglesSetpointNav = *(static_cast<const pidSetpoint *>(message));
+    });
+
     MessageManager::getInstance().subscribe(MOTOR_SETPOINT_TOPIC, [this](const void * message) -> void {
         motorValues = *(static_cast<const motorsData *>(message));
     });
 
-    MessageManager::getInstance().subscribe(STATE_TOPIC, [this](const void * message) -> void {
-        state = *(static_cast<const droneState *>(message));
+    MessageManager::getInstance().subscribe(TELEMETRY_STATE_TOPIC, [this](const void * message) -> void {
+        stateTelemtry = *(static_cast<const droneState *>(message));
     });
 
     rollPid.setOutputRange(-MAX_ANGLE_RATE, MAX_ANGLE_RATE);
     pitchPid.setOutputRange(-MAX_ANGLE_RATE, MAX_ANGLE_RATE);
     yawPid.setOutputRange(-MAX_ANGLE_RATE, MAX_ANGLE_RATE);
 
-    rateRollPid.setOutputRange(-400, 400);
-    ratePitchPid.setOutputRange(-400, 400);
-    rateYawPid.setOutputRange(-400, 400);
+    rateRollPid.setOutputRange( -200, 200);
+    ratePitchPid.setOutputRange(-200, 200);
+    rateYawPid.setOutputRange(  -200, 200);
 
-    altitudePid.setOutputRange(-400, 400);
+    altitudePid.setOutputRange( -200, 200);
 
     if(motors.init() != 0)
         return -1;
@@ -86,6 +89,7 @@ void FlightControllerModule::run() {
 
     getSensor();
     computeRateSetpoints();
+    computePanTiltSetpoints();
     processDroneState();
     computeOutputValues();
     if(state != MANU) computeMotorsValues();
@@ -103,10 +107,36 @@ void FlightControllerModule::getSensor() {
 }
 
 void FlightControllerModule::computeRateSetpoints() {
-    // rollRateSetpoint = (anglesSetpoint.roll  - attitudeValues.roll)  * 5.0f;
-    // pitchRateSetpoint = (anglesSetpoint.pitch - attitudeValues.pitch) * 5.0f;
-    rollRateSetpoint = rollPid.step(anglesSetpoint.roll, attitudeValues.roll);
-    pitchRateSetpoint = pitchPid.step(anglesSetpoint.pitch, attitudeValues.pitch);
+    if(state == POS_HOLD || state == NAVIGATION) {
+        rollRateSetpoint = rollPid.step(anglesSetpointNav.roll, attitudeValues.roll);
+        pitchRateSetpoint = pitchPid.step(anglesSetpointNav.pitch, attitudeValues.pitch);
+    } else {
+        rollRateSetpoint = rollPid.step(anglesSetpoint.roll, attitudeValues.roll);
+        pitchRateSetpoint = pitchPid.step(anglesSetpoint.pitch, attitudeValues.pitch);
+    }
+}
+
+void FlightControllerModule::computePanTiltSetpoints() {
+    if(receiverValues.chan[CAMERA_INIT_POS_CHAN] == MAX_CHANNEL_VALUE && state != LEVEL) {
+        if(receiverValues.chan[ROLL_CHAN] > MAX_SERVO_CHAN_THRESHOLD || MIN_CHANNEL_THRESOLD > receiverValues.chan[ROLL_CHAN])
+            panPulse = panPulse + (receiverValues.chan[ROLL_CHAN] - MID_SERVO_VALUE) * SERVO_SPEED_COEF;
+        if(receiverValues.chan[PITCH_CHAN] > MAX_SERVO_CHAN_THRESHOLD || MIN_CHANNEL_THRESOLD > receiverValues.chan[PITCH_CHAN])
+            tiltPulse = tiltPulse + (receiverValues.chan[PITCH_CHAN] - MID_SERVO_VALUE) * SERVO_SPEED_COEF;
+    } else {
+        panPulse = MID_CHANNEL_VALUE;
+        tiltPulse = MIN_SERVO_VALUE;
+    }
+}
+
+void FlightControllerModule::computeYaw() {
+    if(receiverValues.chan[YAW_CHAN] < MAX_YAW_CHAN_THRESHOLD && receiverValues.chan[YAW_CHAN] > MIN_YAW_CHAN_THRESHOLD) {
+        yaw = attitudeValues.yaw - offsetYaw;
+        // yawRateSetpoint = (-yaw) * 5.0f;
+        yawRateSetpoint = yawPid.step(0, yaw);
+    } else {
+        offsetYaw = attitudeValues.yaw;
+        yawRateSetpoint = anglesSetpoint.yawRate;
+    }
 }
 
 void FlightControllerModule::processDroneState() {
@@ -114,29 +144,21 @@ void FlightControllerModule::processDroneState() {
         state = MANU;
     } else if(receiverValues.chan[THROTTLE_CHAN] < MIN_THROTTLE_THRESOLD || receiverValues.chan[DISARMED_CHAN] >= MAX_CHANNEL_VALUE || stateTelemtry == DISARMED) {
         state = DISARMED;
-    } else if(receiverValues.chan[ROLL_CHAN] > MAX_CHANNEL_THRESOLD || receiverValues.chan[ROLL_CHAN] < MIN_CHANNEL_THRESOLD
-           || receiverValues.chan[PITCH_CHAN] > MAX_CHANNEL_THRESOLD || receiverValues.chan[PITCH_CHAN] < MIN_CHANNEL_THRESOLD) {
+    } else if((receiverValues.chan[ROLL_CHAN] > MAX_CHANNEL_THRESOLD || receiverValues.chan[ROLL_CHAN] < MIN_CHANNEL_THRESOLD
+           || receiverValues.chan[PITCH_CHAN] > MAX_CHANNEL_THRESOLD || receiverValues.chan[PITCH_CHAN] < MIN_CHANNEL_THRESOLD)
+           && receiverValues.chan[CAMERA_INIT_POS_CHAN] == MIN_CHANNEL_VALUE) {
         state = LEVEL;
     } else if(receiverValues.chan[MODE_SELECTION_CHAN] == POS_HOLD_CHAN_5_VALUE) {
         state = POS_HOLD; //TODO Test purpose
+    } else if(receiverValues.chan[MODE_SELECTION_CHAN] == NAVIGATION_CHAN_5_VALUE) {
+        state = NAVIGATION; //TODO Test purpose
     } else {
         state = LEVEL; //TODO Test purpose
     }
 
-    if(state == LEVEL) {
-        if(receiverValues.chan[YAW_CHAN] < MAX_YAW_CHAN_THRESHOLD && receiverValues.chan[YAW_CHAN] > MIN_YAW_CHAN_THRESHOLD) {
-            yaw = attitudeValues.yaw - offsetYaw;
-            // yawRateSetpoint = (-yaw) * 5.0f;
-            yawRateSetpoint = yawPid.step(0, yaw);
-        } else {
-            offsetYaw = attitudeValues.yaw;
-            yawRateSetpoint = anglesSetpoint.yawRate;
-        }
-        altitudeSetpoint = altitudeValues.alt;
-    } else if(state == NAVIGATION || state == POS_HOLD) {
-        yaw = attitudeValues.yaw - offsetYaw;
-        // yawRateSetpoint = (-yaw) * 5.0f;
-        yawRateSetpoint = yawPid.step(0, yaw);
+
+    if(state == LEVEL || state == NAVIGATION || state == POS_HOLD) {
+        computeYaw();
     } else if(state == DISARMED) {
         rollPid.clear();
         pitchPid.clear();
@@ -146,15 +168,19 @@ void FlightControllerModule::processDroneState() {
         ratePitchPid.clear();
         rateYawPid.clear();
 
+        altitudePid.clear();
+
         offsetYaw = attitudeValues.yaw;
     }
+
+    altitudeSetpoint = state == LEVEL ? altitudeValues.alt : altitudeSetpoint;
 }
 
 void FlightControllerModule::computeOutputValues() {
     pidValues.out_roll  = rateRollPid.step(rollRateSetpoint, attitudeValues.gyroRateRoll);
     pidValues.out_pitch = ratePitchPid.step(pitchRateSetpoint, attitudeValues.gyroRatePitch);
     pidValues.out_yaw   = rateYawPid.step(yawRateSetpoint, -attitudeValues.gyroRateYaw);
-    pidValues.out_alt   = isAltHoldleEnable ? altitudePid.step(altitudeSetpoint, altitudeValues.alt) : 0;
+    pidValues.out_alt   = state == POS_HOLD || state == NAVIGATION ? altitudePid.step(altitudeSetpoint, altitudeValues.alt) : 0;
 }
 
 void FlightControllerModule::computeMotorsValues() {
@@ -192,4 +218,9 @@ void FlightControllerModule::sendValuesToMotors() {
     }
 
     motors.setMotors(motorValues);
+
+    panPulse = constrain_(panPulse, MIN_SERVO_VALUE, MAX_SERVO_VALUE);
+    tiltPulse = constrain_(tiltPulse, MIN_SERVO_VALUE, MID_SERVO_VALUE);
+
+    motors.setServoPulse(panPulse, tiltPulse);
 }

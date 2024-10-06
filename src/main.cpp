@@ -20,9 +20,11 @@ void setup() {
     MessageManager::getInstance().addTopic(NAVIGATION_TOPIC);
     MessageManager::getInstance().addTopic(NAVIGATION_CONFIG_TOPIC);
     MessageManager::getInstance().addTopic(ANGLE_SETPOINT_TOPIC);
+    MessageManager::getInstance().addTopic(ANGLE_SETPOINT_NAV_TOPIC);
     MessageManager::getInstance().addTopic(MOTOR_TOPIC);
     MessageManager::getInstance().addTopic(MOTOR_SETPOINT_TOPIC);
     MessageManager::getInstance().addTopic(STATE_TOPIC);
+    MessageManager::getInstance().addTopic(TELEMETRY_STATE_TOPIC);
 
     iOpins.init();
     iOpins.setPinMode(LED_PIN, false);
@@ -41,7 +43,7 @@ void setup() {
         nullptr,           /* Task input parameter */
         2,              /* Priority of the task */
         nullptr,
-        0);
+        1);
 
     xTaskCreatePinnedToCore(
         sensorsTask,   /* Function to implement the task */
@@ -68,7 +70,7 @@ void setup() {
         nullptr,           /* Task input parameter */
         2,              /* Priority of the task */
         nullptr,
-        0);
+        1);
     
     xTaskCreatePinnedToCore(
         controllerTask,   /* Function to implement the task */
@@ -77,7 +79,7 @@ void setup() {
         nullptr,           /* Task input parameter */
         2,              /* Priority of the task */
         nullptr,
-        0);
+        1);
 
     xTaskCreatePinnedToCore(
         telemetryTask,   /* Function to implement the task */

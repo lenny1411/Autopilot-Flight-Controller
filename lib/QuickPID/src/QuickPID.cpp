@@ -62,45 +62,45 @@ float QuickPID::Compute(float sp, float fb) {
 	mySetpoint = sp;
 	myInput = fb;
 
-    float input = myInput;
-    float dInput = input - lastInput;
-    if (action == Action::reverse) dInput = -dInput;
+  float input = myInput;
+  float dInput = input - lastInput;
+  if (action == Action::reverse) dInput = -dInput;
 
-    error = mySetpoint - input;
-    if (action == Action::reverse) error = -error;
-    float dError = error - lastError;
+  error = mySetpoint - input;
+  if (action == Action::reverse) error = -error;
+  float dError = error - lastError;
 
-    float peTerm = kp * error;
-    float pmTerm = kp * dInput;
-    if (pmode == pMode::pOnError) pmTerm = 0;
-    else if (pmode == pMode::pOnMeas) peTerm = 0;
-    else { //pOnErrorMeas
-      peTerm *= 0.5f;
-      pmTerm *= 0.5f;
-    }
-    pTerm = peTerm - pmTerm; // used by GetDterm()
-    iTerm =  ki  * error;
-    if (dmode == dMode::dOnError) dTerm = kd * dError;
-    else dTerm = -kd * dInput; // dOnMeas
+  float peTerm = kp * error;
+  float pmTerm = kp * dInput;
+  if (pmode == pMode::pOnError) pmTerm = 0;
+  else if (pmode == pMode::pOnMeas) peTerm = 0;
+  else { //pOnErrorMeas
+    peTerm *= 0.5f;
+    pmTerm *= 0.5f;
+  }
+  pTerm = peTerm - pmTerm; // used by GetDterm()
+  iTerm =  ki  * error;
+  if (dmode == dMode::dOnError) dTerm = kd * dError;
+  else dTerm = -kd * dInput; // dOnMeas
 
-    //condition anti-windup (default)
-    if (iawmode == iAwMode::iAwCondition) {
-      bool aw = false;
-      float iTermOut = (peTerm - pmTerm) + ki * (iTerm + error);
-      if (iTermOut > outMax && dError > 0) aw = true;
-      else if (iTermOut < outMin && dError < 0) aw = true;
-      if (aw && ki) iTerm = constrain_(iTermOut, -outMax, outMax);
-    }
+  //condition anti-windup (default)
+  if (iawmode == iAwMode::iAwCondition) {
+    bool aw = false;
+    float iTermOut = (peTerm - pmTerm) + ki * (iTerm + error);
+    if (iTermOut > outMax && dError > 0) aw = true;
+    else if (iTermOut < outMin && dError < 0) aw = true;
+    if (aw && ki) iTerm = constrain_(iTermOut, -outMax, outMax);
+  }
 
-    // by default, compute output as per PID_v1
-    outputSum += iTerm;                                                 // include integral amount
-    if (iawmode == iAwMode::iAwOff) outputSum -= pmTerm;                // include pmTerm (no anti-windup)
-    else outputSum = constrain_(outputSum - pmTerm, outMin, outMax);     // include pmTerm and clamp
-    myOutput = constrain_(outputSum + peTerm + dTerm, outMin, outMax);  // include dTerm, clamp and drive output
+  // by default, compute output as per PID_v1
+  outputSum += iTerm;                                                 // include integral amount
+  if (iawmode == iAwMode::iAwOff) outputSum -= pmTerm;                // include pmTerm (no anti-windup)
+  else outputSum = constrain_(outputSum - pmTerm, outMin, outMax);     // include pmTerm and clamp
+  myOutput = constrain_(outputSum + peTerm + dTerm, outMin, outMax);  // include dTerm, clamp and drive output
 
-    lastError = error;
-    lastInput = input;
-    return myOutput;
+  lastError = error;
+  lastInput = input;
+  return myOutput;
 }
 
 /* SetTunings(....)************************************************************

@@ -15,7 +15,9 @@ public:
 
     void flush();
     size_t numBytesAvailable();
+    size_t available() { return numBytesAvailable(); }
     char readByte();
+    char read() { return readByte(); }
     void readBytesUntil(char * buf, char endChar, size_t len);
     void readBytes(char * buf, size_t len);
     void writeByte(char value);
